@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Douk T7 Ultimate Tuner</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.min.js"></script>
+
+    <style>
+        body {
+            background-color: #020617; /* Slate 950 */
+        }
+        /* Smooth rotation for knobs */
+        .knob-transition {
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+        const { 
+            Volume2, Music, Zap, Radio, MicOff, RotateCcw, Info, 
+            Headphones, Moon, Film, Speaker, Mic, Guitar, CheckCircle, Sliders 
+        } = LucideReact;
+
+        const DoukT7Visualizer = () => {
+            // Knob Configuration
+            const MIN_DEG = -150;
+            const MAX_DEG = 150;
+            const MIN_DB = -6;
+            const MAX_DB = 6;
+
+            // Headphone Definitions
+            const headphones = {
+                lcd2c: {
+                    name: "Audeze LCD-2 Classic",
+                    desc: "Stock: Warm & Dark. Needs air & upper-mids.",
+                    color: "from-amber-700 to-orange-500",
+                    iconColor: "text-amber-500",
+                    borderColor: "border-amber-500",
+                    shadowColor: "shadow-amber-500/20"
+                },
+                arya: {
+                    name: "Hifiman Arya Stealth",
+                    desc: "Stock: Bright & Airy. Needs warmth & treble taming.",
+                    color: "from-cyan-700 to-blue-500",
+                    iconColor: "text-cyan-400",
+                    borderColor: "border-cyan-500",
+                    shadowColor: "shadow-cyan-400/20"
+                }
+            };
+
+            const [selectedHeadphone, setSelectedHeadphone] = useState('lcd2c');
+
+            // Helper to convert dB to Degrees
+            const dbToDeg = (db) => {
+                const rangeDb = MAX_DB - MIN_DB; 
+                const rangeDeg = MAX_DEG - MIN_DEG; 
+                const ratio = (db - MIN_DB) / rangeDb;
+                return ratio * rangeDeg + MIN_DEG;
+            };
+
+            // Helper to convert dB to Clock Face
+            const dbToClock = (db) => {
+                if (Math.abs(db) < 0.2) return "12:00";
+                let hourOffset = db / 1.2;
+                let hour = 12 + hourOffset;
+                if (hour > 12.99) hour -= 12;
+                if (hour < 1) hour += 12;
+                const h = Math.floor(hour);
+                const m = Math.round((hour - h) * 60);
+                const mStr = m < 10 ? `0${m}` : m;
+                return `${h}:${mStr}`;
+            };
+
+            // COMPLETE PRESET DATABASE
+            // Values are stored as [LCD-2C Value, Arya Value]
+            // Index 0: LCD-2C
+            // Index 1: Arya Stealth
+            const categories = {
+                calibration: {
+                    title: "Base Calibration",
+                    items: {
+                        neutral: {
+                            name: "Stock / Neutral (Crinacle)",
+                            desc: {
+                                lcd2c: "Fixes the 'veil'. Boosts upper mids (2k/4k) to match IEF Neutral. Leaves bass linear.",
+                                arya: "Fixes the 'glare'. Cuts the 4kHz and 8kHz peaks. Adds slight body."
+                            },
+                            values: {
+                                64: [0, 1],       // LCD: Flat | Arya: Slight warmth
+                                125: [0, 0],
+                                250: [0, 0],
+                                500: [0, 0],
+                                '2k': [1.5, 0],   // LCD: Pinna gain needed | Arya: Good
+                                '4k': [4.5, -2],  // LCD: Fix Dip | Arya: Fix Glare
+                                '8k': [3, -3]     // LCD: Add Air | Arya: Fix Sibilance
+                            }
+                        }
+                    }
+                },
+                styles: {
+                    title: "Listening Styles",
+                    items: {
+                        warmth: {
+                            name: "Fuller Bass & Warmth",
+                            desc: {
+                                lcd2c: "Thickens the low end. Good for old soul/blues.",
+                                arya: "ESSENTIAL for Arya. Adds the body/weight that is naturally missing."
+                            },
+                            values: { 
+                                64: [3.5, 4.5],  
+                                125: [4, 4],     
+                                250: [2, 2],
+                                500: [0, 0],
+                                '2k': [-1, -1],
+                                '4k': [-1, -3],  
+                                '8k': [0, -3]    
+                            }
+                        },
+                        energetic: {
+                            name: "Energetic & Forward",
+                            desc: {
+                                lcd2c: "Brings vocals forward. Can be shouty.",
+                                arya: "Very aggressive. Only for well-recorded tracks. Watch the treble."
+                            },
+                            values: {
+                                64: [1, 2],
+                                125: [0, 1],
+                                250: [-1, 0],
+                                500: [0, -1],
+                                '2k': [2, 0],    
+                                '4k': [3, -1],   
+                                '8k': [4, 1]     
+                            }
+                        },
+                        crisp: {
+                            name: "Crisp Vocals & Detail",
+                            desc: {
+                                lcd2c: "Restores the 'veil'. Boosts presence.",
+                                arya: "Enhances detail but cuts the harsh 8k peak."
+                            },
+                            values: {
+                                64: [0, 1],
+                                125: [-1, 0],
+                                250: [0, 0],
+                                500: [-2.5, -1],
+                                '2k': [0, -1],
+                                '4k': [3, 0],    
+                                '8k': [5, -2]    
+                            }
+                        },
+                        smooth: {
+                            name: "Smooth & Relaxed",
+                            desc: {
+                                lcd2c: "The 'Anti-Shout' special. Cuts 2k.",
+                                arya: "The 'De-Esser'. Cuts 4k and 8k significantly to remove harshness."
+                            },
+                            values: {
+                                64: [1, 2.5],
+                                125: [1, 2],
+                                250: [0, 1],
+                                500: [0, 0],
+                                '2k': [-3.5, -2],
+                                '4k': [-1, -4],   
+                                '8k': [2, -4]     
+                            }
+                        },
+                        latenight: {
+                            name: "Late Night Listening",
+                            desc: {
+                                lcd2c: "Loudness curve. Boosts extremes for low volume.",
+                                arya: "Boosts bass heavily so it doesn't sound thin at low volume."
+                            },
+                            values: {
+                                64: [4.5, 5],
+                                125: [3, 3],
+                                250: [1, 1],
+                                500: [0, 0],
+                                '2k': [-1, -1],
+                                '4k': [2, -1],
+                                '8k': [5, 1]
+                            }
+                        },
+                        theater: {
+                            name: "Theater (Movies)",
+                            desc: {
+                                lcd2c: "Rumble and dialogue clarity.",
+                                arya: "Adds cinematic weight (bass) and keeps dialogue clear but not sharp."
+                            },
+                            values: {
+                                64: [5, 6],       
+                                125: [2, 3],
+                                250: [0, 1],
+                                500: [-2, -1],
+                                '2k': [2, 0],
+                                '4k': [3, -1],
+                                '8k': [4, 0]
+                            }
+                        }
+                    }
+                },
+                genres: {
+                    title: "Music Genres",
+                    items: {
+                        classicrock: {
+                            name: "Classic Rock",
+                            desc: {
+                                lcd2c: "Groove setting. Boosts bass guitar (125Hz).",
+                                arya: "Adds warmth to old recordings. Tames high-hat splashiness."
+                            },
+                            values: {
+                                64: [2, 3],
+                                125: [3.5, 4],   
+                                250: [1, 2],
+                                500: [-1.5, -1],
+                                '2k': [-3.5, -2],
+                                '4k': [0, -2],   
+                                '8k': [3, -1]    
+                            }
+                        },
+                        pop: {
+                            name: "Pop",
+                            desc: {
+                                lcd2c: "Fun V-Shape. Sparkle and thump.",
+                                arya: "Bass boost is mandatory here. Treble kept neutral."
+                            },
+                            values: {
+                                64: [3, 4],
+                                125: [1, 2],
+                                250: [-1, 0],
+                                500: [-1, -1],
+                                '2k': [0, -1],
+                                '4k': [2, -1],
+                                '8k': [4, 0]
+                            }
+                        },
+                        jazz: {
+                            name: "Jazz",
+                            desc: {
+                                lcd2c: "Highlights cymbals and double bass.",
+                                arya: "Focuses on double bass body. Smooths out trumpets."
+                            },
+                            values: {
+                                64: [1, 2],
+                                125: [2.5, 3],
+                                250: [0, 1],
+                                500: [-1, 0],
+                                '2k': [-2.5, -2],
+                                '4k': [1, -2],    
+                                '8k': [3.5, -1]   
+                            }
+                        },
+                        metal: {
+                            name: "Metal",
+                            desc: {
+                                lcd2c: "Impact and anti-shout.",
+                                arya: "NEEDS IMPACT. High bass boost. Cuts treble to stop cymbal fatigue."
+                            },
+                            values: {
+                                64: [4, 5],      
+                                125: [1.5, 3],   
+                                250: [0, 1],
+                                500: [-2, -1],
+                                '2k': [-3, -2],
+                                '4k': [0.5, -2], 
+                                '8k': [4, -1]    
+                            }
+                        },
+                        stoner: {
+                            name: "Stoner Metal",
+                            desc: {
+                                lcd2c: "Wall of sound. Fuzz boost.",
+                                arya: "Thickens the sound significantly to mimic a dark room."
+                            },
+                            values: {
+                                64: [2.5, 4],
+                                125: [4.5, 5],   
+                                250: [3, 3],
+                                500: [0, 1],
+                                '2k': [-2, -2],
+                                '4k': [-1, -3],
+                                '8k': [1, -3]
+                            }
+                        },
+                        acoustic: {
+                            name: "Acoustic",
+                            desc: {
+                                lcd2c: "Highlights string texture.",
+                                arya: "Natural habitat. Slight bass boost to body."
+                            },
+                            values: {
+                                64: [0, 1],
+                                125: [-2, 0],
+                                250: [0, 0],
+                                500: [-1, -1],
+                                '2k': [0, -1],
+                                '4k': [2.5, 0],
+                                '8k': [4.5, 1]
+                            }
+                        },
+                        classical: {
+                            name: "Classical",
+                            desc: {
+                                lcd2c: "Restores air and soundstage.",
+                                arya: "Adds cello weight. Very minimal EQ needed otherwise."
+                            },
+                            values: {
+                                64: [0.5, 2],
+                                125: [0, 1],
+                                250: [0, 0],
+                                500: [0, 0],
+                                '2k': [1, 0],
+                                '4k': [2, -1],
+                                '8k': [4, 0]
+                            }
+                        },
+                        electronic: {
+                            name: "Electronic/Dance",
+                            desc: {
+                                lcd2c: "Sub-bass rumble party.",
+                                arya: "Turns the Arya into a bass cannon (as much as possible)."
+                            },
+                            values: {
+                                64: [5.5, 6],    
+                                125: [2, 3],
+                                250: [-1, 0],
+                                500: [-2, -1],
+                                '2k': [-1, -1],
+                                '4k': [2, 0],
+                                '8k': [5, 1]
+                            }
+                        },
+                        rnb: {
+                            name: "R&B",
+                            desc: {
+                                lcd2c: "Silky vocals and warmth.",
+                                arya: "Smooths sibilant vocals. Boosts bass line."
+                            },
+                            values: {
+                                64: [2.5, 3.5],
+                                125: [3, 3.5],
+                                250: [1, 1],
+                                500: [0, 0],
+                                '2k': [-1.5, -1],
+                                '4k': [0, -2],
+                                '8k': [3, -2]
+                            }
+                        },
+                        rap: {
+                            name: "Rap",
+                            desc: {
+                                lcd2c: "Heavy 808s.",
+                                arya: "Compensates for light bass impact. Tames hi-hats."
+                            },
+                            values: {
+                                64: [5, 6],
+                                125: [1, 2],
+                                250: [0, 0],
+                                500: [-1, -1],
+                                '2k': [1.5, 0],
+                                '4k': [1, -1],
+                                '8k': [3, -1]
+                            }
+                        },
+                        country: {
+                            name: "Country",
+                            desc: {
+                                lcd2c: "Twang enhancer.",
+                                arya: "Adds body to acoustic guitars. Cuts vocal pierce."
+                            },
+                            values: {
+                                64: [1, 2],
+                                125: [2, 2.5],
+                                250: [2, 1],
+                                500: [-1, 0],
+                                '2k': [1.5, -1],
+                                '4k': [2.5, -1],
+                                '8k': [2, -1]
+                            }
+                        },
+                        funk: {
+                            name: "Funk & Soul",
+                            desc: {
+                                lcd2c: "Bass guitar focus.",
+                                arya: "Adds groove weight. Keeps rhythm guitar clean."
+                            },
+                            values: {
+                                64: [2, 3],
+                                125: [4, 4],
+                                250: [0, 1],
+                                500: [-1, -1],
+                                '2k': [0, -1],
+                                '4k': [2.5, 0],
+                                '8k': [3, 0]
+                            }
+                        },
+                        reggae: {
+                            name: "Reggae",
+                            desc: {
+                                lcd2c: "Earth shaking.",
+                                arya: "Attempts to make the Arya a bass-monster."
+                            },
+                            values: {
+                                64: [4.5, 5.5],
+                                125: [5, 5],
+                                250: [1, 2],
+                                500: [0, 0],
+                                '2k': [-1, -1],
+                                '4k': [-1, -2],
+                                '8k': [1, -2]
+                            }
+                        }
+                    }
+                }
+            };
+
+            const [activePresetKey, setActivePresetKey] = useState('neutral');
+            const [activeCategory, setActiveCategory] = useState('calibration'); 
+
+            // Handle HP Selection: Default to "Neutral" preset on switch
+            const handleHeadphoneSwitch = (key) => {
+                setSelectedHeadphone(key);
+                setActivePresetKey('neutral');
+                setActiveCategory('calibration');
+            };
+
+            // Flatten logic
+            const allPresets = { 
+                ...categories.calibration.items,
+                ...categories.styles.items, 
+                ...categories.genres.items 
+            };
+            const activePreset = allPresets[activePresetKey];
+            
+            // Get Values based on Headphone Index (0 for LCD, 1 for Arya)
+            const hpIndex = selectedHeadphone === 'lcd2c' ? 0 : 1;
+            
+            const currentValues = {};
+            if (activePreset) {
+                Object.keys(activePreset.values).forEach(key => {
+                    c
