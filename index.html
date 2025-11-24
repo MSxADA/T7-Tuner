@@ -3,266 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Douk T7 Tuner (Native)</title>
+    <title>Douk T7 Tuner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --bg: #020617;
-            --panel: #0f172a;
-            --border: #1e293b;
-            --text-main: #ffffff;
-            --text-muted: #64748b;
-            --accent: #f59e0b;
-        }
+        body { background-color: #020617; color: white; font-family: system-ui, sans-serif; }
         
-        body {
-            background-color: var(--bg);
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+        /* Knob Animation */
+        .knob-inner { transition: transform 0.6s cubic-bezier(0.1, 1.2, 0.3, 1); }
+        
+        /* Utility to hide scrollbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* --- Header --- */
-        h1 { font-size: 2rem; font-weight: 900; margin: 0; letter-spacing: -1px; text-align: center; }
-        h1 span { color: var(--accent); }
-        .subtitle { color: var(--text-muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-top: 5px; text-align: center; }
-
-        /* --- Output Selector --- */
-        .output-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 10px;
-            width: 100%;
-            max-width: 600px;
-            margin: 30px 0;
-        }
-        .output-btn {
-            background: rgba(15, 23, 42, 0.5);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 15px;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-        .output-btn.active {
-            background: #0f172a;
-            border-color: var(--accent);
-            color: white;
-            box-shadow: 0 0 15px rgba(0,0,0,0.2);
-        }
-        .output-icon { font-size: 1.5rem; }
-        .output-name { font-size: 0.8rem; font-weight: 700; }
-
-        /* --- Main Layout --- */
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 30px;
-            width: 100%;
-            max-width: 1000px;
-        }
-        @media (min-width: 768px) {
-            .main-grid { grid-template-columns: 300px 1fr; }
-        }
-
-        /* --- Preset List --- */
-        .panel {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px;
-        }
-        .panel-title {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .preset-btn {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-muted);
-            padding: 10px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-align: left;
-            border-radius: 8px;
+        /* Custom Button Styles */
+        .btn-base {
             cursor: pointer;
             transition: all 0.2s;
             position: relative;
             overflow: hidden;
         }
-        .preset-btn.active {
-            background: #1e293b;
-            color: white;
-            border-left: 3px solid var(--accent);
-        }
-
-        /* --- Visualizer --- */
-        .vis-panel {
-            background: #0f172a;
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 30px;
-            position: relative;
-            overflow: hidden;
-            min-height: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        /* Ambient Background */
-        .glow {
-            position: absolute; top: 0; left: 0; right: 0; height: 4px;
-            background: var(--accent); opacity: 0.5; box-shadow: 0 0 20px var(--accent);
-            transition: background 0.5s;
-        }
-
-        /* Info Box */
-        .info-box { margin-bottom: 40px; position: relative; z-index: 2; }
-        .info-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .preset-name { font-size: 1.8rem; font-weight: 800; margin: 0; }
-        .mode-badge { 
-            font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
-            padding: 4px 8px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent);
-        }
-        .preset-desc { font-size: 0.9rem; color: #94a3b8; line-height: 1.5; border-left: 2px solid var(--border); padding-left: 15px; }
-
-        /* Knobs Row */
-        .knobs-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Responsive columns */
-            gap: 15px;
-            justify-items: center;
-            position: relative; z-index: 2;
-        }
+        .btn-base:active { transform: scale(0.98); }
         
-        /* Knob Component */
-        .knob-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
-        .knob-label { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 1px; }
-        
-        .knob-circle {
-            width: 60px; height: 60px;
-            border-radius: 50%;
-            background: #1e293b;
-            border: 2px solid #334155;
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(255,255,255,0.05);
-        }
-        /* Tick Marks SVG */
-        .knob-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3; pointer-events: none; }
-        
-        /* Rotating Inner */
-        .knob-rotator {
-            width: 100%; height: 100%;
-            border-radius: 50%;
-            position: absolute; top: 0; left: 0;
-            transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2); /* Bouncy spring */
-        }
-        .knob-indicator {
-            width: 4px; height: 20px;
-            background: var(--text-muted);
-            position: absolute; top: 4px; left: 50%;
-            transform: translateX(-50%);
-            border-radius: 2px;
-            transition: background 0.3s, box-shadow 0.3s;
-        }
-
-        /* Value Text */
-        .knob-val-box {
-            margin-top: 10px;
-            background: #020617;
-            border: 1px solid #1e293b;
-            padding: 2px 8px;
-            border-radius: 4px;
-            min-width: 40px;
-            text-align: center;
-        }
-        .knob-val { font-family: monospace; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
-        .knob-clock { font-family: monospace; font-size: 0.65rem; color: #475569; margin-top: 2px; }
-
-        /* Active State Helpers */
-        .knob-active .knob-indicator { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-        .knob-active .knob-val { color: white; }
-        .knob-cut .knob-indicator { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
-        .knob-cut .knob-val { color: #f43f5e; }
-
     </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
 
-    <!-- HEADER -->
-    <h1>DOUK T7 <span>TUNER</span></h1>
-    <div class="subtitle">Native Calibration Tool</div>
-
-    <!-- OUTPUT SELECTOR -->
-    <div class="output-grid" id="output-container">
-        <!-- Buttons injected by JS -->
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">
+            DOUK T7 <span id="header-accent" class="text-amber-500">TUNER</span>
+        </h1>
+        <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.3em]">Native Calibration Tool</p>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div class="main-grid">
+    <!-- Output Selector -->
+    <div class="w-full max-w-4xl grid grid-cols-3 gap-3 md:gap-6 mb-10" id="output-container">
+        <!-- Javascript will insert buttons here -->
+    </div>
+
+    <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- CONTROLS -->
-        <div>
-            <!-- Styles -->
-            <div class="panel">
-                <div class="panel-title">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        <!-- Left Column: Controls -->
+        <div class="lg:col-span-4 flex flex-col gap-6">
+            <!-- Styles Group -->
+            <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 shadow-lg">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
                     Listening Styles
-                </div>
-                <div class="preset-grid" id="styles-container"></div>
+                </h3>
+                <div class="grid grid-cols-2 gap-2" id="styles-container"></div>
             </div>
-            
-            <br>
 
-            <!-- Genres -->
-            <div class="panel">
-                <div class="panel-title">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13M9 9l12-2M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+            <!-- Genres Group -->
+            <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 shadow-lg">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13M9 9l12-2M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
                     Music Genres
-                </div>
-                <div class="preset-grid" id="genres-container"></div>
+                </h3>
+                <div class="grid grid-cols-2 gap-2" id="genres-container"></div>
             </div>
         </div>
 
-        <!-- VISUALIZER -->
-        <div>
-            <div class="vis-panel">
-                <div class="glow" id="glow-bar"></div>
+        <!-- Right Column: Visualizer -->
+        <div class="lg:col-span-8">
+            <div class="w-full bg-slate-900 rounded-3xl border border-slate-700 p-6 md:p-10 shadow-2xl relative overflow-hidden min-h-[500px] flex flex-col justify-center">
                 
-                <!-- INFO -->
-                <div class="info-box">
-                    <div class="info-header">
-                        <h2 class="preset-name" id="preset-title">Neutral</h2>
-                        <div class="mode-badge" id="mode-badge">LCD-2C MODE</div>
+                <!-- Dynamic Backgrounds -->
+                <div id="bg-glow" class="absolute top-0 left-0 w-full h-1 opacity-60 transition-colors duration-500"></div>
+                <div id="bg-blob" class="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-5 transition-colors duration-500"></div>
+
+                <!-- Info Panel -->
+                <div class="mb-12 relative z-10">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 id="preset-name" class="text-3xl font-bold text-white">Loading...</h2>
+                        <span id="mode-badge" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors duration-300">
+                            Mode
+                        </span>
                     </div>
-                    <div class="preset-desc" id="preset-desc">
-                        Loading description...
+                    <div class="flex gap-3 border-l-2 border-slate-700 pl-4">
+                        <svg id="info-icon" class="mt-1 text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <p id="preset-desc" class="text-slate-300 text-sm leading-relaxed">Select a preset to begin.</p>
                     </div>
                 </div>
 
-                <!-- KNOBS -->
-                <div class="knobs-row" id="knobs-row">
-                    <!-- Knobs injected by JS -->
+                <!-- KNOBS GRID -->
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-y-12 gap-x-4 justify-items-center relative z-10" id="knobs-row">
+                    <!-- Knobs will be injected here by JS -->
                 </div>
             </div>
         </div>
-
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
@@ -305,123 +134,151 @@
         let currentPreset = 'neutral';
 
         // --- DOM ELEMENTS ---
-        const outputContainer = document.getElementById('output-container');
-        const stylesContainer = document.getElementById('styles-container');
-        const genresContainer = document.getElementById('genres-container');
-        const knobsRow = document.getElementById('knobs-row');
-        const glowBar = document.getElementById('glow-bar');
-        const presetTitle = document.getElementById('preset-title');
-        const presetDesc = document.getElementById('preset-desc');
-        const modeBadge = document.getElementById('mode-badge');
+        const els = {
+            headerAccent: document.getElementById('header-accent'),
+            outputContainer: document.getElementById('output-container'),
+            stylesContainer: document.getElementById('styles-container'),
+            genresContainer: document.getElementById('genres-container'),
+            presetName: document.getElementById('preset-name'),
+            presetDesc: document.getElementById('preset-desc'),
+            modeBadge: document.getElementById('mode-badge'),
+            infoIcon: document.getElementById('info-icon'),
+            bgGlow: document.getElementById('bg-glow'),
+            bgBlob: document.getElementById('bg-blob'),
+            knobsRow: document.getElementById('knobs-row')
+        };
 
-        // --- INITIALIZATION ---
-        function init() {
-            renderOutputs();
-            renderPresetButtons();
-            renderKnobs(); // Create structure
-            updateUI();
-        }
-
-        function renderOutputs() {
-            outputContainer.innerHTML = Object.values(CONFIG).map(out => `
-                <div class="output-btn ${currentOutput === out.id ? 'active' : ''}" onclick="switchOutput('${out.id}')">
-                    <div class="output-icon" style="color: ${currentOutput === out.id ? out.color : 'inherit'}">${out.icon}</div>
-                    <div class="output-name">${out.name}</div>
-                </div>
-            `).join('');
-        }
-
-        function renderPresetButtons() {
-            const styles = ['warmth', 'energetic', 'crisp', 'smooth', 'latenight', 'theater'];
-            const genres = Object.keys(PRESETS).filter(k => k !== 'neutral' && !styles.includes(k));
-
-            stylesContainer.innerHTML = styles.map(k => createPresetBtn(k)).join('');
-            genresContainer.innerHTML = genres.map(k => createPresetBtn(k)).join('');
-        }
-
-        function createPresetBtn(key) {
-            const isActive = currentPreset === key;
-            return `<div class="preset-btn ${isActive ? 'active' : ''}" onclick="switchPreset('${key}')">${PRESETS[key].name}</div>`;
-        }
-
-        function renderKnobs() {
+        // --- HELPERS ---
+        function createKnobs() {
             const freqs = ['64','125','250','500','2k','4k','8k'];
-            knobsRow.innerHTML = freqs.map(freq => `
-                <div class="knob-wrapper" id="knob-${freq}">
-                    <div class="knob-label">${freq.toUpperCase().replace('K', ' kHz').replace(/^[0-9]+$/, '$& Hz')}</div>
-                    <div class="knob-circle">
-                        <svg class="knob-ticks" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg>
-                        <div class="knob-rotator">
-                            <div class="knob-indicator"></div>
+            els.knobsRow.innerHTML = freqs.map(freq => `
+                <div class="knob-container flex flex-col items-center w-full" id="knob-${freq}">
+                    <span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">${freq.replace('k', ' kHz').replace(/^[0-9]+$/, '$& Hz')}</span>
+                    <div class="relative w-16 h-16">
+                        <svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg>
+                        <div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center">
+                            <div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500 shadow-sm transition-colors duration-300"></div>
+                            <div class="w-full h-full rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
                         </div>
                     </div>
-                    <div class="knob-val-box"><div class="knob-val">0</div></div>
-                    <div class="knob-clock">12:00</div>
+                    <div class="mt-3 flex flex-col items-center gap-1">
+                        <div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80">
+                            <span class="val-text text-sm font-mono font-bold">0</span>
+                        </div>
+                        <span class="clock-text text-[10px] font-mono text-slate-600">12:00</span>
+                    </div>
                 </div>
             `).join('');
         }
 
-        // --- ACTIONS ---
+        // --- RENDER ---
+        function renderOutputs() {
+            els.outputContainer.innerHTML = Object.values(CONFIG).map(out => {
+                const isActive = currentOutput === out.id;
+                return `
+                <div class="btn-base relative p-4 rounded-xl border-2 flex flex-col items-center gap-3 ${isActive ? 'bg-slate-900' : 'bg-slate-900/40 opacity-70'}"
+                     style="border-color: ${isActive ? out.color : '#1e293b'}; box-shadow: ${isActive ? '0 0 20px '+out.color+'33' : 'none'}"
+                     onclick="switchOutput('${out.id}')">
+                    <div class="text-2xl" style="color: ${isActive ? out.color : '#64748b'}">${out.icon}</div>
+                    <div class="font-bold text-xs md:text-sm ${isActive ? 'text-white' : 'text-slate-400'}">${out.name}</div>
+                    ${isActive ? `<div class="absolute top-0 left-0 w-full h-1" style="background:${out.color}"></div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        function renderPresets() {
+            const styleKeys = ['warmth', 'energetic', 'crisp', 'smooth', 'latenight', 'theater'];
+            const genreKeys = Object.keys(PRESETS).filter(k => k !== 'neutral' && !styleKeys.includes(k));
+            
+            const createBtn = (key) => {
+                const isActive = currentPreset === key;
+                const color = CONFIG[currentOutput].color;
+                return `
+                <div class="btn-base px-3 py-3 rounded-lg text-sm font-medium text-left border"
+                     style="background-color: ${isActive ? '#1e293b' : 'transparent'}; 
+                            border-color: ${isActive ? color+'40' : 'transparent'};
+                            border-left: ${isActive ? '4px solid '+color : '1px solid transparent'};
+                            color: ${isActive ? 'white' : '#94a3b8'}"
+                     onclick="switchPreset('${key}')">
+                    ${PRESETS[key].name}
+                </div>`;
+            };
+
+            els.stylesContainer.innerHTML = styleKeys.map(createBtn).join('');
+            els.genresContainer.innerHTML = genreKeys.map(createBtn).join('');
+        }
+
+        // --- LOGIC ---
         window.switchOutput = (id) => {
             currentOutput = id;
-            currentPreset = 'neutral'; // Reset to neutral on switch
-            renderOutputs();
+            currentPreset = 'neutral';
             updateUI();
         };
 
         window.switchPreset = (key) => {
             currentPreset = key;
-            renderPresetButtons(); // Re-render to update active state
             updateUI();
         };
 
         function updateUI() {
+            renderOutputs(); // Re-render for active states
+            renderPresets(); // Re-render for active states & color changes
+
             const config = CONFIG[currentOutput];
             const preset = PRESETS[currentPreset];
-            
-            // Colors
-            document.documentElement.style.setProperty('--accent', config.color);
-            document.documentElement.style.setProperty('--accent-dim', config.color + '40');
-            
-            // Info
-            presetTitle.innerText = preset.name;
-            presetDesc.innerText = preset.desc[currentOutput];
-            modeBadge.innerText = config.name + " Mode";
-            
-            // Knobs Logic
-            const outputIndex = currentOutput === 'lcd2c' ? 0 : currentOutput === 'arya' ? 1 : 2;
-            const freqs = ['64','125','250','500','2k','4k','8k'];
-            
-            freqs.forEach(freq => {
-                const wrapper = document.getElementById(`knob-${freq}`);
-                const val = preset.vals[freq][outputIndex];
+            const idx = currentOutput === 'lcd2c' ? 0 : currentOutput === 'arya' ? 1 : 2;
+
+            // Text & Colors
+            els.headerAccent.style.color = config.color;
+            els.presetName.textContent = preset.name;
+            els.presetDesc.textContent = preset.desc[currentOutput];
+            els.modeBadge.textContent = config.name + ' Mode';
+            els.modeBadge.style.color = config.color;
+            els.modeBadge.style.borderColor = config.color;
+            els.modeBadge.style.backgroundColor = config.color + '15';
+            els.infoIcon.style.color = config.color;
+            els.bgGlow.style.background = `linear-gradient(90deg, transparent, ${config.color}, transparent)`;
+            els.bgBlob.style.background = config.color;
+
+            // Knobs
+            ['64','125','250','500','2k','4k','8k'].forEach(freq => {
+                const el = document.getElementById(`knob-${freq}`);
+                const val = preset.vals[freq][idx] || 0;
                 const isBoost = val > 0.1;
                 const isCut = val < -0.1;
-                
-                // Visual State
-                wrapper.classList.remove('knob-active', 'knob-cut');
-                if (isBoost) wrapper.classList.add('knob-active');
-                if (isCut) wrapper.classList.add('knob-cut');
 
-                // Rotate
-                // Map -6 to +6 range to -150deg to +150deg
-                const minDb = -6, maxDb = 6;
-                const minDeg = -150, maxDeg = 150;
-                const degrees = ((val - minDb) / (maxDb - minDb)) * (maxDeg - minDeg) + minDeg;
+                // Math
+                const minDb=-6, maxDb=6, minDeg=-150, maxDeg=150;
+                const rot = ((val - minDb)/(maxDb - minDb))*(maxDeg - minDeg) + minDeg;
                 
-                const rotator = wrapper.querySelector('.knob-rotator');
-                rotator.style.transform = `rotate(${degrees}deg)`;
+                // Styling
+                const activeColor = isCut ? '#f43f5e' : (isBoost ? config.color : '#64748b');
+                const glow = (isBoost || isCut) ? `0 0 15px ${activeColor}40` : 'none';
 
-                // Text
-                wrapper.querySelector('.knob-val').innerText = (val > 0 ? '+' : '') + val;
+                // Apply
+                el.querySelector('.knob-inner').style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+                el.querySelector('.knob-inner').style.boxShadow = glow;
                 
-                // Clock Time
+                const indicator = el.querySelector('.indicator');
+                indicator.style.backgroundColor = activeColor;
+                indicator.style.boxShadow = `0 0 5px ${activeColor}`;
+
+                const valBox = el.querySelector('.val-box');
+                valBox.style.color = (isBoost || isCut) ? 'white' : '#64748b';
+                el.querySelector('.val-text').textContent = (val > 0 ? '+' : '') + val;
+
+                // Clock
                 let h = 12 + (val / 1.2);
-                if (h > 12.99) h -= 12; if (h < 1) h += 12;
+                if(h > 12.99) h -= 12; if(h < 1) h += 12;
                 let m = Math.round((h % 1) * 60);
-                let mStr = m < 10 ? '0'+m : m;
-                wrapper.querySelector('.knob-clock').innerText = `${Math.floor(h)}:${mStr}`;
+                el.querySelector('.clock-text').textContent = `${Math.floor(h)}:${m < 10 ? '0'+m : m}`;
             });
         }
 
-     
+        // Init
+        createKnobs();
+        updateUI();
+
+    </script>
+</body>
+</html>
