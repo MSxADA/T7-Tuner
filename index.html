@@ -3,152 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Douk T7 Ultimate Tuner</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Douk T7 Tuner (Native)</title>
     <style>
-        body { background-color: #020617; color: white; font-family: system-ui, sans-serif; }
+        :root {
+            --bg: #020617;
+            --panel: #0f172a;
+            --border: #1e293b;
+            --text-main: #ffffff;
+            --text-muted: #64748b;
+            --accent: #f59e0b;
+        }
         
-        /* Knob Animation */
-        .knob-inner { transition: transform 0.6s cubic-bezier(0.1, 1.2, 0.3, 1); }
-        
-        /* Utility to hide scrollbars */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
 
-        /* Selection Highlights */
-        .btn-active { background-color: #1e293b; border-color: var(--accent); color: white; }
-        .btn-inactive { background-color: rgba(15, 23, 42, 0.5); border-color: transparent; color: #94a3b8; }
+        /* --- Header --- */
+        h1 { font-size: 2rem; font-weight: 900; margin: 0; letter-spacing: -1px; text-align: center; }
+        h1 span { color: var(--accent); }
+        .subtitle { color: var(--text-muted); font-size: 0.7rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; margin-top: 5px; text-align: center; }
+
+        /* --- Output Selector --- */
+        .output-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 600px;
+            margin: 30px 0;
+        }
+        .output-btn {
+            background: rgba(15, 23, 42, 0.5);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .output-btn.active {
+            background: #0f172a;
+            border-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .output-icon { font-size: 1.5rem; }
+        .output-name { font-size: 0.8rem; font-weight: 700; }
+
+        /* --- Main Layout --- */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            width: 100%;
+            max-width: 1000px;
+        }
+        @media (min-width: 768px) {
+            .main-grid { grid-template-columns: 300px 1fr; }
+        }
+
+        /* --- Preset List --- */
+        .panel {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .panel-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .preset-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: left;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .preset-btn.active {
+            background: #1e293b;
+            color: white;
+            border-left: 3px solid var(--accent);
+        }
+
+        /* --- Visualizer --- */
+        .vis-panel {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        /* Ambient Background */
+        .glow {
+            position: absolute; top: 0; left: 0; right: 0; height: 4px;
+            background: var(--accent); opacity: 0.5; box-shadow: 0 0 20px var(--accent);
+            transition: background 0.5s;
+        }
+
+        /* Info Box */
+        .info-box { margin-bottom: 40px; position: relative; z-index: 2; }
+        .info-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .preset-name { font-size: 1.8rem; font-weight: 800; margin: 0; }
+        .mode-badge { 
+            font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            padding: 4px 8px; border-radius: 4px; border: 1px solid var(--accent); color: var(--accent);
+        }
+        .preset-desc { font-size: 0.9rem; color: #94a3b8; line-height: 1.5; border-left: 2px solid var(--border); padding-left: 15px; }
+
+        /* Knobs Row */
+        .knobs-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); /* Responsive columns */
+            gap: 15px;
+            justify-items: center;
+            position: relative; z-index: 2;
+        }
         
-        /* Glow Effects */
-        .glow-ring { box-shadow: 0 0 15px var(--accent-dim); }
+        /* Knob Component */
+        .knob-wrapper { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .knob-label { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; letter-spacing: 1px; }
+        
+        .knob-circle {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 2px solid #334155;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.05);
+        }
+        /* Tick Marks SVG */
+        .knob-ticks { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3; pointer-events: none; }
+        
+        /* Rotating Inner */
+        .knob-rotator {
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            position: absolute; top: 0; left: 0;
+            transition: transform 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2); /* Bouncy spring */
+        }
+        .knob-indicator {
+            width: 4px; height: 20px;
+            background: var(--text-muted);
+            position: absolute; top: 4px; left: 50%;
+            transform: translateX(-50%);
+            border-radius: 2px;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+
+        /* Value Text */
+        .knob-val-box {
+            margin-top: 10px;
+            background: #020617;
+            border: 1px solid #1e293b;
+            padding: 2px 8px;
+            border-radius: 4px;
+            min-width: 40px;
+            text-align: center;
+        }
+        .knob-val { font-family: monospace; font-size: 0.9rem; font-weight: 700; color: var(--text-muted); }
+        .knob-clock { font-family: monospace; font-size: 0.65rem; color: #475569; margin-top: 2px; }
+
+        /* Active State Helpers */
+        .knob-active .knob-indicator { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .knob-active .knob-val { color: white; }
+        .knob-cut .knob-indicator { background: #f43f5e; box-shadow: 0 0 8px #f43f5e; }
+        .knob-cut .knob-val { color: #f43f5e; }
+
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+<body>
 
-    <!-- Header -->
-    <div class="text-center mb-8">
-        <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">
-            DOUK T7 <span id="header-accent" class="text-amber-500">TUNER</span>
-        </h1>
-        <p class="text-slate-500 text-xs font-bold uppercase tracking-[0.3em]">Native Calibration Tool</p>
+    <!-- HEADER -->
+    <h1>DOUK T7 <span>TUNER</span></h1>
+    <div class="subtitle">Native Calibration Tool</div>
+
+    <!-- OUTPUT SELECTOR -->
+    <div class="output-grid" id="output-container">
+        <!-- Buttons injected by JS -->
     </div>
 
-    <!-- Output Selector -->
-    <div class="w-full max-w-4xl grid grid-cols-3 gap-3 md:gap-6 mb-10" id="output-container">
-        <!-- Buttons generated by JS -->
-    </div>
-
-    <div class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <!-- MAIN CONTENT -->
+    <div class="main-grid">
         
-        <!-- Left Column: Controls -->
-        <div class="lg:col-span-4 flex flex-col gap-6">
-            <!-- Styles Group -->
-            <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <!-- Slider Icon -->
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+        <!-- CONTROLS -->
+        <div>
+            <!-- Styles -->
+            <div class="panel">
+                <div class="panel-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
                     Listening Styles
-                </h3>
-                <div class="grid grid-cols-2 gap-2" id="styles-container"></div>
+                </div>
+                <div class="preset-grid" id="styles-container"></div>
             </div>
+            
+            <br>
 
-            <!-- Genres Group -->
-            <div class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5 shadow-lg">
-                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <!-- Music Icon -->
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13M9 9l12-2M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+            <!-- Genres -->
+            <div class="panel">
+                <div class="panel-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13M9 9l12-2M6 18a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 16a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
                     Music Genres
-                </h3>
-                <div class="grid grid-cols-2 gap-2" id="genres-container"></div>
+                </div>
+                <div class="preset-grid" id="genres-container"></div>
             </div>
         </div>
 
-        <!-- Right Column: Visualizer -->
-        <div class="lg:col-span-8">
-            <div class="w-full bg-slate-900 rounded-3xl border border-slate-700 p-6 md:p-10 shadow-2xl relative overflow-hidden min-h-[500px] flex flex-col justify-center">
+        <!-- VISUALIZER -->
+        <div>
+            <div class="vis-panel">
+                <div class="glow" id="glow-bar"></div>
                 
-                <!-- Dynamic Backgrounds -->
-                <div id="bg-glow" class="absolute top-0 left-0 w-full h-1 opacity-60 transition-colors duration-500"></div>
-                <div id="bg-blob" class="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-5 transition-colors duration-500"></div>
-
-                <!-- Info Panel -->
-                <div class="mb-12 relative z-10">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 id="preset-name" class="text-3xl font-bold text-white">Loading...</h2>
-                        <span id="mode-badge" class="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors duration-300">
-                            Mode
-                        </span>
+                <!-- INFO -->
+                <div class="info-box">
+                    <div class="info-header">
+                        <h2 class="preset-name" id="preset-title">Neutral</h2>
+                        <div class="mode-badge" id="mode-badge">LCD-2C MODE</div>
                     </div>
-                    <div class="flex gap-3 border-l-2 border-slate-700 pl-4">
-                        <svg id="info-icon" class="mt-1 text-slate-500" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                        <p id="preset-desc" class="text-slate-300 text-sm leading-relaxed">Description...</p>
+                    <div class="preset-desc" id="preset-desc">
+                        Loading description...
                     </div>
                 </div>
 
-                <!-- KNOBS GRID -->
-                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-y-12 gap-x-4 justify-items-center relative z-10">
-                    
-                    <!-- Template for Knobs (Repeated 7 times via JS) -->
-                    <!-- 64Hz -->
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="64">
-                        <span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">64 Hz</span>
-                        <div class="relative w-16 h-16">
-                            <svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg>
-                            <div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center">
-                                <div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500 shadow-sm transition-colors duration-300"></div>
-                                <div class="w-full h-full rounded-full bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"></div>
-                            </div>
-                        </div>
-                        <div class="mt-3 flex flex-col items-center gap-1">
-                            <div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80 text-slate-500">
-                                <span class="val-text text-sm font-mono font-bold">0</span>
-                            </div>
-                            <span class="clock-text text-[10px] font-mono text-slate-600">12:00</span>
-                        </div>
-                    </div>
-
-                    <!-- Repeat for other freqs -->
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="125"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">125 Hz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="250"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">250 Hz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="500"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">500 Hz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="2k"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-amber-200 opacity-80">2 kHz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="4k"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-amber-200 opacity-80">4 kHz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
-                    <div class="knob-container flex flex-col items-center w-full" data-freq="8k"><span class="text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500">8 kHz</span><div class="relative w-16 h-16"><svg class="absolute inset-0 w-full h-full opacity-30" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg><div class="knob-inner w-14 h-14 bg-slate-800 rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-2 border-slate-700 flex items-center justify-center"><div class="indicator w-1 h-5 rounded-full absolute -top-0.5 bg-slate-500"></div></div></div><div class="mt-3 flex flex-col items-center gap-1"><div class="val-box flex items-center justify-center w-12 py-0.5 rounded border border-slate-800 bg-slate-900/80"><span class="val-text text-sm font-mono font-bold">0</span></div><span class="clock-text text-[10px] font-mono text-slate-600">12:00</span></div></div>
-
+                <!-- KNOBS -->
+                <div class="knobs-row" id="knobs-row">
+                    <!-- Knobs injected by JS -->
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- APP LOGIC -->
+    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // --- CONFIGURATION ---
+        // --- DATA ---
         const CONFIG = {
-            outputs: {
-                lcd2c: { name: "Audeze LCD-2C", color: "#f59e0b", bg: "#451a03", icon: "🎧" },
-                arya: { name: "Hifiman Arya", color: "#22d3ee", bg: "#083344", icon: "🎧" },
-                stereo: { name: "Def Tech DM60", color: "#10b981", bg: "#064e3b", icon: "🔊" }
-            }
+            lcd2c: { id:'lcd2c', name:"Audeze LCD-2C", icon:"🎧", color:"#f59e0b" },
+            arya: { id:'arya', name:"Hifiman Arya", icon:"🎧", color:"#22d3ee" },
+            stereo: { id:'stereo', name:"Def Tech DM60", icon:"🔊", color:"#10b981" }
         };
 
-        // PRESET DATA [LCD, Arya, Stereo]
         const PRESETS = {
             // Calibration
             neutral: { name: "Stock / Neutral", desc: { lcd2c:"Restores mids/air.", arya:"Tames glare.", stereo:"Balanced room." }, vals: {64:[0,1,0],125:[0,0,-1.5],250:[0,0,0],500:[0,0,0.5],'2k':[1.5,0,-1],'4k':[4.5,-2,-1],'8k':[3,-3,0]} },
-            
             // Styles
-            warmth: { name: "Fuller Bass & Warmth", desc: { lcd2c:"Thickens low end.", arya:"Adds body.", stereo:"Tube warmth." }, vals: {64:[3.5,4.5,2],125:[4,4,3],250:[2,2,2],500:[0,0,0],'2k':[-1,-1,-1],'4k':[-1,-3,-2],'8k':[0,-3,-2]} },
-            energetic: { name: "Energetic & Forward", desc: { lcd2c:"Vocals closer.", arya:"Aggressive.", stereo:"Live concert." }, vals: {64:[1,2,1],125:[0,1,0],250:[-1,0,-1],500:[0,-1,0],'2k':[2,0,1],'4k':[3,-1,1],'8k':[4,1,2]} },
-            crisp: { name: "Crisp & Detailed", desc: { lcd2c:"Max clarity.", arya:"Detail w/o hiss.", stereo:"Vocal focus." }, vals: {64:[0,1,0],125:[-1,0,-2],250:[0,0,-1],500:[-2.5,-1,-1],'2k':[0,-1,0],'4k':[3,0,-1],'8k':[5,-2,0]} },
-            smooth: { name: "Smooth & Relaxed", desc: { lcd2c:"Anti-shout.", arya:"De-Esser.", stereo:"Late night lounge." }, vals: {64:[1,2.5,1],125:[1,2,1],250:[0,1,0],500:[0,0,0],'2k':[-3.5,-2,-2],'4k':[-1,-4,-2],'8k':[2,-4,-3]} },
+            warmth: { name: "Fuller Bass", desc: { lcd2c:"Thickens low end.", arya:"Adds body.", stereo:"Tube warmth." }, vals: {64:[3.5,4.5,2],125:[4,4,3],250:[2,2,2],500:[0,0,0],'2k':[-1,-1,-1],'4k':[-1,-3,-2],'8k':[0,-3,-2]} },
+            energetic: { name: "Energetic", desc: { lcd2c:"Vocals closer.", arya:"Aggressive.", stereo:"Live concert." }, vals: {64:[1,2,1],125:[0,1,0],250:[-1,0,-1],500:[0,-1,0],'2k':[2,0,1],'4k':[3,-1,1],'8k':[4,1,2]} },
+            crisp: { name: "Crisp Detail", desc: { lcd2c:"Max clarity.", arya:"Detail w/o hiss.", stereo:"Vocal focus." }, vals: {64:[0,1,0],125:[-1,0,-2],250:[0,0,-1],500:[-2.5,-1,-1],'2k':[0,-1,0],'4k':[3,0,-1],'8k':[5,-2,0]} },
+            smooth: { name: "Smooth", desc: { lcd2c:"Anti-shout.", arya:"De-Esser.", stereo:"Late night lounge." }, vals: {64:[1,2.5,1],125:[1,2,1],250:[0,1,0],500:[0,0,0],'2k':[-3.5,-2,-2],'4k':[-1,-4,-2],'8k':[2,-4,-3]} },
             latenight: { name: "Late Night", desc: { lcd2c:"Loudness contour.", arya:"Low vol fullness.", stereo:"Low vol clarity." }, vals: {64:[4.5,5,3],125:[3,3,1],250:[1,1,1],500:[0,0,0],'2k':[-1,-1,-1],'4k':[2,-1,-1],'8k':[5,1,0]} },
-            theater: { name: "Theater / Cinema", desc: { lcd2c:"Rumble/dialogue.", arya:"Cinematic.", stereo:"Blockbuster." }, vals: {64:[5,6,4],125:[2,3,1],250:[0,1,0],500:[-2,-1,-1],'2k':[2,0,2],'4k':[3,-1,0],'8k':[4,0,2]} },
-
+            theater: { name: "Theater", desc: { lcd2c:"Rumble/dialogue.", arya:"Cinematic.", stereo:"Blockbuster." }, vals: {64:[5,6,4],125:[2,3,1],250:[0,1,0],500:[-2,-1,-1],'2k':[2,0,2],'4k':[3,-1,0],'8k':[4,0,2]} },
             // Genres
             classicrock: { name: "Classic Rock", desc: { lcd2c:"Groove mode.", arya:"Vintage warmth.", stereo:"70s Hi-Fi." }, vals: {64:[2,3,1],125:[3.5,4,3],250:[1,2,1],500:[-1.5,-1,-1],'2k':[-3.5,-2,-2],'4k':[0,-2,-1],'8k':[3,-1,1]} },
             pop: { name: "Pop", desc: { lcd2c:"V-Shape.", arya:"Bass boost.", stereo:"Radio ready." }, vals: {64:[3,4,2],125:[1,2,0],250:[-1,0,-1],500:[-1,-1,0],'2k':[0,-1,-1],'4k':[2,-1,-1],'8k':[4,0,1]} },
@@ -170,35 +305,123 @@
         let currentPreset = 'neutral';
 
         // --- DOM ELEMENTS ---
-        const els = {
-            headerAccent: document.getElementById('header-accent'),
-            outputContainer: document.getElementById('output-container'),
-            stylesContainer: document.getElementById('styles-container'),
-            genresContainer: document.getElementById('genres-container'),
-            presetName: document.getElementById('preset-name'),
-            presetDesc: document.getElementById('preset-desc'),
-            modeBadge: document.getElementById('mode-badge'),
-            infoIcon: document.getElementById('info-icon'),
-            bgGlow: document.getElementById('bg-glow'),
-            bgBlob: document.getElementById('bg-blob'),
-            knobs: document.querySelectorAll('.knob-container')
-        };
+        const outputContainer = document.getElementById('output-container');
+        const stylesContainer = document.getElementById('styles-container');
+        const genresContainer = document.getElementById('genres-container');
+        const knobsRow = document.getElementById('knobs-row');
+        const glowBar = document.getElementById('glow-bar');
+        const presetTitle = document.getElementById('preset-title');
+        const presetDesc = document.getElementById('preset-desc');
+        const modeBadge = document.getElementById('mode-badge');
 
-        // --- RENDER FUNCTIONS ---
+        // --- INITIALIZATION ---
+        function init() {
+            renderOutputs();
+            renderPresetButtons();
+            renderKnobs(); // Create structure
+            updateUI();
+        }
 
         function renderOutputs() {
-            els.outputContainer.innerHTML = '';
-            Object.entries(CONFIG.outputs).forEach(([key, data]) => {
-                const isActive = key === currentOutput;
-                const btn = document.createElement('button');
-                btn.className = `relative p-4 rounded-xl border-2 transition-all duration-300 flex flex-col items-center gap-3 overflow-hidden ${isActive ? 'bg-slate-900' : 'bg-slate-900/40 opacity-70'}`;
-                btn.style.borderColor = isActive ? data.color : '#1e293b';
-                btn.style.boxShadow = isActive ? `0 0 20px ${data.color}33` : 'none';
+            outputContainer.innerHTML = Object.values(CONFIG).map(out => `
+                <div class="output-btn ${currentOutput === out.id ? 'active' : ''}" onclick="switchOutput('${out.id}')">
+                    <div class="output-icon" style="color: ${currentOutput === out.id ? out.color : 'inherit'}">${out.icon}</div>
+                    <div class="output-name">${out.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function renderPresetButtons() {
+            const styles = ['warmth', 'energetic', 'crisp', 'smooth', 'latenight', 'theater'];
+            const genres = Object.keys(PRESETS).filter(k => k !== 'neutral' && !styles.includes(k));
+
+            stylesContainer.innerHTML = styles.map(k => createPresetBtn(k)).join('');
+            genresContainer.innerHTML = genres.map(k => createPresetBtn(k)).join('');
+        }
+
+        function createPresetBtn(key) {
+            const isActive = currentPreset === key;
+            return `<div class="preset-btn ${isActive ? 'active' : ''}" onclick="switchPreset('${key}')">${PRESETS[key].name}</div>`;
+        }
+
+        function renderKnobs() {
+            const freqs = ['64','125','250','500','2k','4k','8k'];
+            knobsRow.innerHTML = freqs.map(freq => `
+                <div class="knob-wrapper" id="knob-${freq}">
+                    <div class="knob-label">${freq.toUpperCase().replace('K', ' kHz').replace(/^[0-9]+$/, '$& Hz')}</div>
+                    <div class="knob-circle">
+                        <svg class="knob-ticks" viewBox="0 0 100 100"><path d="M20 80 A 40 40 0 1 1 80 80" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></svg>
+                        <div class="knob-rotator">
+                            <div class="knob-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="knob-val-box"><div class="knob-val">0</div></div>
+                    <div class="knob-clock">12:00</div>
+                </div>
+            `).join('');
+        }
+
+        // --- ACTIONS ---
+        window.switchOutput = (id) => {
+            currentOutput = id;
+            currentPreset = 'neutral'; // Reset to neutral on switch
+            renderOutputs();
+            updateUI();
+        };
+
+        window.switchPreset = (key) => {
+            currentPreset = key;
+            renderPresetButtons(); // Re-render to update active state
+            updateUI();
+        };
+
+        function updateUI() {
+            const config = CONFIG[currentOutput];
+            const preset = PRESETS[currentPreset];
+            
+            // Colors
+            document.documentElement.style.setProperty('--accent', config.color);
+            document.documentElement.style.setProperty('--accent-dim', config.color + '40');
+            
+            // Info
+            presetTitle.innerText = preset.name;
+            presetDesc.innerText = preset.desc[currentOutput];
+            modeBadge.innerText = config.name + " Mode";
+            
+            // Knobs Logic
+            const outputIndex = currentOutput === 'lcd2c' ? 0 : currentOutput === 'arya' ? 1 : 2;
+            const freqs = ['64','125','250','500','2k','4k','8k'];
+            
+            freqs.forEach(freq => {
+                const wrapper = document.getElementById(`knob-${freq}`);
+                const val = preset.vals[freq][outputIndex];
+                const isBoost = val > 0.1;
+                const isCut = val < -0.1;
                 
-                // Inner HTML
-                btn.innerHTML = `
-                    <div style="color:${isActive ? data.color : '#64748b'}" class="text-2xl">${data.icon}</div>
-                    <span class="font-bold text-sm ${isActive ? 'text-white' : 'text-slate-400'}">${data.name}</span>
-                    ${isActive ? `<div class="absolute top-0 left-0 w-full h-1" style="background:${data.color}"></div>` : ''}
-                `;
+                // Visual State
+                wrapper.classList.remove('knob-active', 'knob-cut');
+                if (isBoost) wrapper.classList.add('knob-active');
+                if (isCut) wrapper.classList.add('knob-cut');
+
+                // Rotate
+                // Map -6 to +6 range to -150deg to +150deg
+                const minDb = -6, maxDb = 6;
+                const minDeg = -150, maxDeg = 150;
+                const degrees = ((val - minDb) / (maxDb - minDb)) * (maxDeg - minDeg) + minDeg;
+                
+                const rotator = wrapper.querySelector('.knob-rotator');
+                rotator.style.transform = `rotate(${degrees}deg)`;
+
+                // Text
+                wrapper.querySelector('.knob-val').innerText = (val > 0 ? '+' : '') + val;
+                
+                // Clock Time
+                let h = 12 + (val / 1.2);
+                if (h > 12.99) h -= 12; if (h < 1) h += 12;
+                let m = Math.round((h % 1) * 60);
+                let mStr = m < 10 ? '0'+m : m;
+                wrapper.querySelector('.knob-clock').innerText = `${Math.floor(h)}:${mStr}`;
+            });
+        }
+
      
